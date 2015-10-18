@@ -35,23 +35,25 @@ head(activity)
 ## 5    NA 2012-10-01       20
 ## 6    NA 2012-10-01       25
 ```
-We create another column for our convenience which combines the date and interval into
-a time value, dttm, and take another look at our data:
+We create a column which combines the date and interval into
+a time value, dttm, and another that converts the interval into a cardinal number, 
+interval_val, and take another look at our data:
 
 ```r
 activity$interval_str <- sprintf("%02d:%02d", floor(activity$interval/100), activity$interval %% 100)
 activity <- mutate(activity, dttm = as.POSIXct(paste(date, interval_str), format="%Y-%m-%d %H:%M"))
+activity <- mutate(activity, interval_val = 60 * floor(interval/100) + interval %% 100)
 head(activity)
 ```
 
 ```
-##   steps       date interval interval_str                dttm
-## 1    NA 2012-10-01        0        00:00 2012-10-01 00:00:00
-## 2    NA 2012-10-01        5        00:05 2012-10-01 00:05:00
-## 3    NA 2012-10-01       10        00:10 2012-10-01 00:10:00
-## 4    NA 2012-10-01       15        00:15 2012-10-01 00:15:00
-## 5    NA 2012-10-01       20        00:20 2012-10-01 00:20:00
-## 6    NA 2012-10-01       25        00:25 2012-10-01 00:25:00
+##   steps       date interval interval_str                dttm interval_val
+## 1    NA 2012-10-01        0        00:00 2012-10-01 00:00:00            0
+## 2    NA 2012-10-01        5        00:05 2012-10-01 00:05:00            5
+## 3    NA 2012-10-01       10        00:10 2012-10-01 00:10:00           10
+## 4    NA 2012-10-01       15        00:15 2012-10-01 00:15:00           15
+## 5    NA 2012-10-01       20        00:20 2012-10-01 00:20:00           20
+## 6    NA 2012-10-01       25        00:25 2012-10-01 00:25:00           25
 ```
 
 ## What is mean total number of steps each day?
@@ -119,9 +121,11 @@ into 0.
 ```r
 activity2 <- activity
 activity2$steps[is.na(activity2$steps)] <- 0
-activ_sum_interval <- activity2 %>% group_by(interval) %>% summarize(mean(steps))
+activ_sum_interval <- activity2 %>% group_by(interval_val) %>% summarize(mean(steps))
 names(activ_sum_interval)[2] <- "steps"
-qplot(activ_sum_interval$interval, activ_sum_interval$steps, geom = 'line', col = I("blue"), main = "Avg Number of Steps (by 5-minute interval)", xlab = "Time of Day", ylab = "Avg Number of Steps")
+
+t <- ggplot(activ_sum_interval, aes(interval_val, steps)) + geom_line(color = "blue") + xlab("Time of Day") + ylab("Steps") + scale_x_continuous(breaks = c(0, 360, 720, 1080, 1435), labels = c("0:00", "6:00", "12:00", "18:00", "23:55"))
+t
 ```
 
 ![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png) 
@@ -131,11 +135,12 @@ the maximum number of steps?
 
 
 ```r
-activ_sum_interval$interval[which.max(activ_sum_interval$steps)]
+max_t <- activ_sum_interval$interval_val[which.max(activ_sum_interval$steps)]
+sprintf("%02d:%02d", floor(max_t/60), max_t - 60 * floor(max_t/60))
 ```
 
 ```
-## [1] 835
+## [1] "08:35"
 ```
 
 ## Imputing missing values
@@ -215,10 +220,11 @@ average number of steps taken, averaged across all weekday days or weekend days.
 
 
 ```r
-activ_sum_interval <- activity2 %>% group_by(interval, dayType) %>% summarize(mean(steps))
+activity2 <- mutate(activity2, interval_val = 60 * floor(interval/100) + interval %% 100)
+activ_sum_interval <- activity2 %>% group_by(interval_val, dayType) %>% summarize(mean(steps))
 names(activ_sum_interval)[3] <- "steps"
 
-t <- ggplot(activ_sum_interval, aes(interval, steps, color = factor(dayType))) + geom_line() + facet_wrap(~dayType, nrow = 2) + xlab("Time of Day") + ylab("Steps") + theme(legend.position = "none")
+t <- ggplot(activ_sum_interval, aes(interval_val, steps, color = factor(dayType))) + geom_line() + facet_wrap(~dayType, nrow = 2) + xlab("Time of Day") + ylab("Steps") + theme(legend.position = "none") + scale_x_continuous(breaks = c(0, 360, 720, 1080, 1435), labels = c("0:00", "6:00", "12:00", "18:00", "23:55"))
 t
 ```
 
